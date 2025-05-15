@@ -67,13 +67,22 @@ document.addEventListener("DOMContentLoaded", () => {
         updateControls();
     }
 
-    function getPieceUnicode(piece) {
-        const pieces = {
-            p: "♟", r: "♜", n: "♞", b: "♝", q: "♛", k: "♚",
-            P: "♙", R: "♖", N: "♘", B: "♗", Q: "♕", K: "♔"
-        };
-        return pieces[piece.type] || "";
-    }
+  function getPieceUnicode(piece) {
+    const pieceMap = {
+        // Mapeamento por TIPO (todas minúsculas) e COR
+        p: { white: 'PeaoBranco.svg', black: 'PeaoPreto.svg' },
+        r: { white: 'TorreBranca.svg', black: 'TorrePreta.svg' },
+        n: { white: 'CavaloBranco.svg', black: 'CavaloPreto.svg' },
+        b: { white: 'BispoBranco.svg', black: 'BispoPreto.svg' },
+        q: { white: 'DamaBranca.svg', black: 'DamaPreta.svg' },
+        k: { white: 'ReiBranco.svg', black: 'ReiPreto.svg' }
+    };
+    
+    const type = piece.type.toLowerCase(); // Normaliza para minúscula
+    const color = piece.color === 'w' ? 'white' : 'black';
+    
+    return `<img src="images/${pieceMap[type][color]}" alt="${type}" class="piece-svg">`;
+}
 
     document.querySelectorAll(".square").forEach(square => {
         square.addEventListener("click", () => {
