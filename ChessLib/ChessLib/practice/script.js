@@ -1,4 +1,5 @@
 document.addEventListener("DOMContentLoaded", () => {
+    
     const board = document.getElementById("chessboard");
     const moveList = document.getElementById("move-list");
     const resetButton = document.getElementById("reset-button");
@@ -13,11 +14,16 @@ document.addEventListener("DOMContentLoaded", () => {
     const engine = new Worker("stockfish/stockfish.js");
     let selectedSquare = null;
     let undoneMoves = [];
+    let lastMove = null;
     const files = "abcdefgh";
 
     engine.onmessage = function (e) {
         if (typeof e.data === "string" && e.data.startsWith("bestmove")) {
             const move = e.data.split(" ")[1];
+            lastMove = {
+                from: move.slice(0, 2),
+                to: move.slice(2, 4)
+            };
             game.move({ from: move.slice(0, 2), to: move.slice(2, 4), promotion: "q" });
             renderBoard();
             checkGameOver();
@@ -55,10 +61,24 @@ document.addEventListener("DOMContentLoaded", () => {
             square.innerHTML = "";
             const position = square.dataset.position;
             const piece = game.get(position);
+            
             if (piece) {
                 const pieceElement = document.createElement("span");
                 pieceElement.innerHTML = getPieceUnicode(piece);
                 pieceElement.classList.add(piece.color === "w" ? "white-piece" : "black-piece");
+                
+                if (lastMove && position === lastMove.to) {
+                    const fromSquare = document.querySelector(`[data-position="${lastMove.from}"]`);
+                    if (fromSquare) {
+                        const fromRect = fromSquare.getBoundingClientRect();
+                        const toRect = square.getBoundingClientRect();
+                        
+                        pieceElement.style.setProperty('--dx', `${fromRect.left - toRect.left}px`);
+                        pieceElement.style.setProperty('--dy', `${fromRect.top - toRect.top}px`);
+                        pieceElement.classList.add("moving-piece");
+                    }
+                }
+                
                 square.appendChild(pieceElement);
             }
         });
@@ -68,11 +88,19 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     function getPieceUnicode(piece) {
-        const pieces = {
-            p: "♟", r: "♜", n: "♞", b: "♝", q: "♛", k: "♚",
-            P: "♙", R: "♖", N: "♘", B: "♗", Q: "♕", K: "♔"
+        const pieceMap = {
+            p: { white: 'PeaoBranco.svg', black: 'PeaoPreto.svg' },
+            r: { white: 'TorreBranca.svg', black: 'TorrePreta.svg' },
+            n: { white: 'CavaloBranco.svg', black: 'CavaloPreto.svg' },
+            b: { white: 'BispoBranco.svg', black: 'BispoPreto.svg' },
+            q: { white: 'DamaBranca.svg', black: 'DamaPreta.svg' },
+            k: { white: 'ReiBranco.svg', black: 'ReiPreto.svg' }
         };
-        return pieces[piece.type] || "";
+        
+        const type = piece.type.toLowerCase();
+        const color = piece.color === 'w' ? 'white' : 'black';
+        
+        return `<img src="images/${pieceMap[type][color]}" alt="${type}" class="piece-svg">`;
     }
 
     document.querySelectorAll(".square").forEach(square => {
@@ -93,13 +121,13 @@ document.addEventListener("DOMContentLoaded", () => {
 
             if (move) {
                 undoneMoves = [];
+                lastMove = { from: move.from, to: move.to };
                 renderBoard();
                 checkGameOver();
 
                 if (gameMode === "engine" && !game.game_over()) {
-                    // Envia o FEN para o motor calcular
                     engine.postMessage("position fen " + game.fen());
-                    engine.postMessage("go depth 15"); // Profundidade da análise
+                    engine.postMessage("go depth 15");
                 }
             }
 
@@ -149,6 +177,7 @@ document.addEventListener("DOMContentLoaded", () => {
     forwardArrow.addEventListener("click", () => {
         if (undoneMoves.length > 0) {
             const move = undoneMoves.pop();
+            lastMove = { from: move.from, to: move.to };
             game.move(move);
             renderBoard();
         }
@@ -157,6 +186,7 @@ document.addEventListener("DOMContentLoaded", () => {
     resetButton.addEventListener("click", () => {
         game.reset();
         undoneMoves = [];
+        lastMove = null;
         renderBoard();
         moveList.innerHTML = "";
         modal.style.display = "none";
@@ -170,6 +200,7 @@ document.addEventListener("DOMContentLoaded", () => {
         gameMode = "local";
         game.reset();
         undoneMoves = [];
+        lastMove = null;
         renderBoard();
         modal.style.display = "none";
     });
@@ -178,6 +209,7 @@ document.addEventListener("DOMContentLoaded", () => {
         gameMode = "engine";
         game.reset();
         undoneMoves = [];
+        lastMove = null;
         renderBoard();
         modal.style.display = "none";
 
